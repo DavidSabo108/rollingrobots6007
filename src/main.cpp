@@ -17,21 +17,21 @@ using namespace vex;
 vex::brain       Brain;
 competition Competition;
 controller Controller1 = controller(primary);
-motor LT(PORT11, ratio18_1, true);//front motor
+motor LF(PORT11, ratio18_1, true);//front motor
 motor LM(PORT12, ratio18_1, false);//middle
 motor LB(PORT13, ratio18_1, true);//back
-motor_group LMG = motor_group(LT, LM, LB);
-motor RT(PORT1, ratio18_1, false);//front motor
+motor_group LMG = motor_group(LF, LM, LB);
+motor RF(PORT1, ratio18_1, false);//front motor
 motor RM(PORT2, ratio18_1, true);//middle
 motor RB(PORT3, ratio18_1, false);//back
-motor_group RMG = motor_group(RT, RM, RB);
+motor_group RMG = motor_group(RF, RM, RB);
 rotation PG = rotation(PORT4, false);
 inertial Gyro = inertial(PORT5);
 //setup variables
 float pi = 3.14;
 float dia = 2.75;
 float Kp = 5;
-float Ki = 1;
+float Ki = 0.2;
 float Kd = 1;
 //functions
 
@@ -55,26 +55,41 @@ void driveBrake() {
 }
 void inchDrive(float target) {
    float x = 0;
+   float past_x = 0;
    float speed = 0;//target;
    float Kp = 80/target;
+   float Ki = target/60;
+   float f_now = 0;
+   float f_last = 0;
+   float integral = 0;
+   float dx;
+   
    PG.resetPosition();
-//    while (int(x)!= int(target)) {
-   if(target<0){
-       while(x>target){
+   while (fabs(x - target) > 0.1) {
+/*   if(target<0){
+       while(x>target){*/
            x = PG.position(rev)*dia*pi;
-           speed = Kp*(target-x);
+           f_now = Kp * (target - x);
+           f_last = Kp * (target - past_x);
+           dx = x - past_x;
+           integral = 0.5 * (f_now + f_last) * dx;
+           speed = Kp * (target - x ) + Ki * integral;
            driveSpeed(speed, speed, 10);
-           Brain.Screen.printAt(100,40,"x=%d",x);
+           Brain.Screen.printAt(100,40,"x=%0.2f",x);
+            if(fabs(target-x)<0.5 && speed <5){
+               break;
+           }
+           past_x = x;
+//}
 }
-}
-   if(target>0){
+/*   if(target>0){
        while(x<target){
            x = PG.position(rev)*dia*pi;
            speed = Kp*(target-x);
            driveSpeed(speed, speed, 10);
            Brain.Screen.printAt(100,40,"x=%d",x);
    }  
-   }
+   }*/
    driveBrake();
 }
 void turn(int angle) {
@@ -111,13 +126,8 @@ void pre_auton(void) {
 
 
 void autonomous(void) {
-  inchDrive(36);
-  //turn(-90);
-  /*while (true)
-  {
-   gyroPrint();
-  }*/
- 
+  inchDrive(36);  
+
 }
 
 
